@@ -4,10 +4,10 @@ App::App(HINSTANCE hInstance)
         : m_hInstance   (hInstance)
         , m_hwnd        (nullptr)
         , m_visible     (false)
-        , m_opacity     (255)
 {}
 
 App::~App() {
+        m_config.save();
         UnregisterHotKey(m_hwnd, 1);
 }
 
@@ -22,14 +22,23 @@ void App::toggleVisibility() {
         }
 }
 
+void App::paintWindow(HDC hdc) {
+        RECT rc;
+        GetClientRect(m_hwnd, &rc);
+        HBRUSH brush = CreateSolidBrush(RGB(m_config.color.r, m_config.color.g, m_config.color.b));
+        FillRect(hdc, &rc, brush);
+        DeleteObject(brush);
+}
+
 void App::adjustOpacity(int delta) {
-        m_opacity += delta;
-        if(m_opacity > 255) m_opacity = 255;
-        if(m_opacity < 30) m_opacity = 30;
-        SetLayeredWindowAttributes(m_hwnd, 0, m_opacity, LWA_ALPHA);
+        m_config.opacity += delta;
+        if(m_config.opacity > 255) m_config.opacity = 255;
+        if(m_config.opacity < 30) m_config.opacity = 30;
+        SetLayeredWindowAttributes(m_hwnd, 0, m_config.opacity, LWA_ALPHA);
 }
 
 bool App::init() {
+        if(!m_config.load()) return false;
         if(!registerWindowClass())      return false;
         if(!createWindow())             return false;
         if(!RegisterHotKey(m_hwnd, 1, MOD_CONTROL | MOD_ALT, 'L')) {
@@ -56,8 +65,8 @@ bool App::createWindow() {
                         "GetLightClass",
                         "GetLight",
                         WS_POPUP,
-                        100, 100,
-                        500, 500,
+                        m_config.x, m_config.y,
+                        m_config.width, m_config.height,
                         nullptr, nullptr,
                         m_hInstance,
                         this
@@ -68,7 +77,7 @@ bool App::createWindow() {
                 return false;
         }
 
-        SetLayeredWindowAttributes(m_hwnd, 0, m_opacity, LWA_ALPHA);
+        SetLayeredWindowAttributes(m_hwnd, 0, m_config.opacity, LWA_ALPHA);
         return true;
 }
 
@@ -88,11 +97,7 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                 case WM_PAINT: {
                         PAINTSTRUCT ps;
                         HDC hdc = BeginPaint(hwnd, &ps);
-                        RECT rc;
-                        GetClientRect(hwnd, &rc);
-                        HBRUSH brush = CreateSolidBrush(RGB(255, 255, 255));
-                        FillRect(hdc, &rc, brush);
-                        DeleteObject(brush);
+                        if(app) app->paintWindow(hdc);
                         EndPaint(hwnd, &ps);
                         return 0;
                 }
