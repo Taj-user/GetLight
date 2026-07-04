@@ -13,8 +13,10 @@ class App {
                 HINSTANCE       m_hInstance;
                 HWND            m_hwnd;
                 bool            m_visible;
+                int             m_opacity;
 
                 void            toggleVisibility();
+                void            adjustOpacity(int delta);
 
                 bool            registerWindowClass();
                 bool            createWindow();

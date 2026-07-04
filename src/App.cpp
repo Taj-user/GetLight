@@ -4,6 +4,7 @@ App::App(HINSTANCE hInstance)
         : m_hInstance   (hInstance)
         , m_hwnd        (nullptr)
         , m_visible     (false)
+        , m_opacity     (255)
 {}
 
 App::~App() {
@@ -12,7 +13,20 @@ App::~App() {
 
 void App::toggleVisibility() {
         m_visible = !m_visible;
-        ShowWindow(m_hwnd, m_visible ? SW_SHOW : SW_HIDE);
+        if(m_visible) {
+                ShowWindow(m_hwnd, SW_SHOW);
+                SetForegroundWindow(m_hwnd);
+        }
+        else {
+                ShowWindow(m_hwnd, SW_HIDE);
+        }
+}
+
+void App::adjustOpacity(int delta) {
+        m_opacity += delta;
+        if(m_opacity > 255) m_opacity = 255;
+        if(m_opacity < 30) m_opacity = 30;
+        SetLayeredWindowAttributes(m_hwnd, 0, m_opacity, LWA_ALPHA);
 }
 
 bool App::init() {
@@ -54,7 +68,7 @@ bool App::createWindow() {
                 return false;
         }
 
-        SetLayeredWindowAttributes(m_hwnd, 0, 255, LWA_ALPHA);
+        SetLayeredWindowAttributes(m_hwnd, 0, m_opacity, LWA_ALPHA);
         return true;
 }
 
@@ -76,7 +90,7 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                         HDC hdc = BeginPaint(hwnd, &ps);
                         RECT rc;
                         GetClientRect(hwnd, &rc);
-                        HBRUSH brush = CreateSolidBrush(RGB(255, 244, 214));
+                        HBRUSH brush = CreateSolidBrush(RGB(255, 255, 255));
                         FillRect(hdc, &rc, brush);
                         DeleteObject(brush);
                         EndPaint(hwnd, &ps);
@@ -96,6 +110,12 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                         if(wParam == VK_ESCAPE)
                                 PostQuitMessage(0);
                         return 0;
+
+                case WM_MOUSEWHEEL: {
+                        int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+                        if(app) app->adjustOpacity(delta > 0 ? 15 : -15);
+                        return 0;
+                }
         }
         return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
