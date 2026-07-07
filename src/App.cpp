@@ -53,6 +53,33 @@ bool App::createWindow() {
         return true;
 }
 
+void App::handleMenuCommand(WORD id) {
+        switch(id) {
+                case IDM_PRESET_WARM:
+                        m_config.color = {255, 244, 214};
+                        InvalidateRect(m_hwnd, nullptr, TRUE);
+                        break;
+
+                case IDM_PRESET_WHITE:
+                        m_config.color = {255, 255, 255};
+                        InvalidateRect(m_hwnd, nullptr, TRUE);
+                        break;
+
+                case IDM_PRESET_SOFT:
+                        m_config.color = {255, 230, 180};
+                        InvalidateRect(m_hwnd, nullptr, TRUE);
+                        break;
+
+                case IDM_STARTUP:
+                        // placeholder
+                        break;
+
+                case IDM_QUIT:
+                        DestroyWindow(m_hwnd);
+                        break;
+        }
+}
+
 bool App::init() {
         if(!m_config.load()) return false;
         if(!registerWindowClass())      return false;
@@ -98,6 +125,26 @@ int App::run() {
         return static_cast<int>(msg.wParam);
 }
 
+void App::showContextMenu() {
+        HMENU menu = CreatePopupMenu();
+
+        AppendMenu(menu, MF_STRING, IDM_PRESET_WARM, "Warm Light");
+        AppendMenu(menu, MF_STRING, IDM_PRESET_WHITE, "White Light");
+        AppendMenu(menu, MF_STRING, IDM_PRESET_SOFT, "Soft Yellow");
+        AppendMenu(menu, MF_SEPARATOR, 0, nullptr);
+        AppendMenu(menu, MF_STRING, IDM_STARTUP, "Launch on Startup");
+        AppendMenu(menu, MF_SEPARATOR, 0, nullptr);
+        AppendMenu(menu, MF_STRING, IDM_QUIT, "Quit");
+
+        POINT pt;
+        GetCursorPos(&pt);
+
+        SetForegroundWindow(m_hwnd);
+        TrackPopupMenu(menu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, m_hwnd, nullptr);
+        DestroyMenu(menu);
+
+}
+
 void App::toggleVisibility() {
         m_visible = !m_visible;
         if(m_visible) {
@@ -118,37 +165,46 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
         App* app = reinterpret_cast<App*>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 
         switch(uMsg) {
+                case WM_COMMAND:
+                        if(app) app->handleMenuCommand(LOWORD(wParam));
+                        return 0;
+
                 case WM_DESTROY:
                         PostQuitMessage(0);
                         return 0;
 
-                case WM_PAINT: {
-                                       PAINTSTRUCT ps;
-                                       HDC hdc = BeginPaint(hwnd, &ps);
-                                       if(app) app->paintWindow(hdc);
-                                       EndPaint(hwnd, &ps);
-                                       return 0;
-                               }
-
                 case WM_HOTKEY: {
-                                        if(wParam == 1 && app)
-                                                app->toggleVisibility();
-                                        return 0;
-                                }
-
-                case WM_NCHITTEST:
-                                return HTCAPTION;
+                        if(wParam == 1 && app)
+                                app->toggleVisibility();
+                        return 0;
+                }
 
                 case WM_KEYDOWN:
-                                if(wParam == VK_ESCAPE)
-                                        PostQuitMessage(0);
-                                return 0;
+                        if(wParam == VK_ESCAPE)
+                                PostQuitMessage(0);
+                        return 0;
 
                 case WM_MOUSEWHEEL: {
-                                            int delta = GET_WHEEL_DELTA_WPARAM(wParam);
-                                            if(app) app->adjustOpacity(delta > 0 ? 15 : -15);
-                                            return 0;
-                                    }
+                        int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+                        if(app) app->adjustOpacity(delta > 0 ? 15 : -15);
+                        return 0;
+                }
+
+                case WM_NCHITTEST:
+                        return HTCAPTION;
+
+                case WM_PAINT: {
+                        PAINTSTRUCT ps;
+                        HDC hdc = BeginPaint(hwnd, &ps);
+                        if(app) app->paintWindow(hdc);
+                        EndPaint(hwnd, &ps);
+                        return 0;
+                }
+
+                case WM_TRAYICON:
+                        if(lParam == WM_RBUTTONUP && app)
+                                app->showContextMenu();
+                        return 0;
         }
         return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }

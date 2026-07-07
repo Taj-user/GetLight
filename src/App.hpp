@@ -1,5 +1,11 @@
 #pragma once
-#define WM_TRAYICON (WM_APP + 1)
+
+#define WM_TRAYICON             (WM_APP + 1)
+#define IDM_PRESET_WARM         101
+#define IDM_PRESET_WHITE        102
+#define IDM_PRESET_SOFT         103
+#define IDM_STARTUP             104
+#define IDM_QUIT                105
 
 #include <windows.h>
 #include "Config.hpp"
@@ -21,8 +27,10 @@ class App {
 
                 void            addTrayIcon();
                 void            adjustOpacity(int delta);
+                void            handleMenuCommand(WORD id);
                 void            paintWindow(HDC hdc);
                 void            removeTrayIcon();
+                void            showContextMenu();
                 void            toggleVisibility();
 
                 bool            createWindow();
