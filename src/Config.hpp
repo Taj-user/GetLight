@@ -12,6 +12,8 @@ struct Config {
         int opacity;
         Color color;
 
+        bool launchOnStartup;
+
         bool load();
         bool save();
 };

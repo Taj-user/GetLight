@@ -53,6 +53,35 @@ bool App::createWindow() {
         return true;
 }
 
+void App::disableStartup() {
+        HKEY key;
+        RegOpenKeyEx(HKEY_CURRENT_USER,
+                        "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+                        0,
+                        KEY_SET_VALUE, &key\
+                        );
+        RegDeleteValue(key, "GetLight");
+        RegCloseKey(key);
+
+        m_config.launchOnStartup = false;
+}
+
+void App::enableStartup() {
+        char path[MAX_PATH];
+        GetModuleFileName(nullptr, path, MAX_PATH);
+
+        HKEY key;
+        RegOpenKeyEx(HKEY_CURRENT_USER,
+                        "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+                        0,
+                        KEY_SET_VALUE, &key
+                        );
+        RegSetValueEx(key, "GetLight", 0, REG_SZ, (BYTE*)path, strlen(path) + 1);
+        RegCloseKey(key);
+
+        m_config.launchOnStartup = true;
+}
+
 void App::handleMenuCommand(WORD id) {
         switch(id) {
                 case IDM_PRESET_WARM:
@@ -71,7 +100,10 @@ void App::handleMenuCommand(WORD id) {
                         break;
 
                 case IDM_STARTUP:
-                        // placeholder
+                        if(m_config.launchOnStartup)
+                                disableStartup();
+                        else
+                                enableStartup();
                         break;
 
                 case IDM_QUIT:
@@ -132,7 +164,7 @@ void App::showContextMenu() {
         AppendMenu(menu, MF_STRING, IDM_PRESET_WHITE, "White Light");
         AppendMenu(menu, MF_STRING, IDM_PRESET_SOFT, "Soft Yellow");
         AppendMenu(menu, MF_SEPARATOR, 0, nullptr);
-        AppendMenu(menu, MF_STRING, IDM_STARTUP, "Launch on Startup");
+        AppendMenu(menu, MF_STRING | (m_config.launchOnStartup ? MF_CHECKED : MF_UNCHECKED), IDM_STARTUP, "Launch on Startup");
         AppendMenu(menu, MF_SEPARATOR, 0, nullptr);
         AppendMenu(menu, MF_STRING, IDM_QUIT, "Quit");
 

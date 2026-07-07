@@ -27,6 +27,8 @@ class App {
 
                 void            addTrayIcon();
                 void            adjustOpacity(int delta);
+                void            disableStartup();
+                void            enableStartup();
                 void            handleMenuCommand(WORD id);
                 void            paintWindow(HDC hdc);
                 void            removeTrayIcon();
