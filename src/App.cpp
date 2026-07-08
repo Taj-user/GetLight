@@ -2,7 +2,8 @@
 #include "App.hpp"
 
 App::App(HINSTANCE hInstance) 
-        : m_hInstance   (hInstance)
+        : m_customColors{}
+        , m_hInstance   (hInstance)
         , m_hwnd        (nullptr)
         , m_visible     (false)
 {}
@@ -85,6 +86,10 @@ void App::enableStartup() {
 
 void App::handleMenuCommand(WORD id) {
         switch(id) {
+                case IDM_COLOR:
+                        showColorPicker();
+                        break;
+
                 case IDM_PRESET_WARM:
                         m_config.color = {255, 244, 214};
                         InvalidateRect(m_hwnd, nullptr, TRUE);
@@ -132,9 +137,13 @@ void App::onMove(int x, int y) {
 
 void App::onResize() {
         RECT rc;
-        GetClientRect(m_hwnd, &rc);
-        m_config.width = rc.right;
-        m_config.height = rc.bottom;
+        GetWindowRect(m_hwnd, &rc);
+        int w = rc.right - rc.left;
+        int h = rc.bottom - rc.top;
+        if(w > 0 && h > 0) {
+                m_config.width = w;
+                m_config.height = h;
+        }
 }
 
 void App::paintWindow(HDC hdc) {
@@ -169,12 +178,35 @@ int App::run() {
         return static_cast<int>(msg.wParam);
 }
 
+void App::showColorPicker() {
+        if(!m_visible) {
+                m_visible = true;
+                ShowWindow(m_hwnd, SW_SHOW);
+                SetForegroundWindow(m_hwnd);
+        }
+
+        CHOOSECOLOR cc  = {};
+        cc.lStructSize  = sizeof(CHOOSECOLOR);
+        cc.hwndOwner    = m_hwnd;
+        cc.rgbResult    = RGB(m_config.color.r, m_config.color.g, m_config.color.b);
+        cc.lpCustColors = m_customColors;
+        cc.Flags        = CC_FULLOPEN | CC_RGBINIT;
+
+        if(ChooseColor(&cc)) {
+                m_config.color.r = GetRValue(cc.rgbResult);
+                m_config.color.g = GetGValue(cc.rgbResult);
+                m_config.color.b = GetBValue(cc.rgbResult);
+                RedrawWindow(m_hwnd, nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE);
+        }
+}
+
 void App::showContextMenu() {
         HMENU menu = CreatePopupMenu();
 
         AppendMenu(menu, MF_STRING, IDM_PRESET_WARM, "Warm Light");
         AppendMenu(menu, MF_STRING, IDM_PRESET_WHITE, "White Light");
         AppendMenu(menu, MF_STRING, IDM_PRESET_SOFT, "Soft Yellow");
+        AppendMenu(menu, MF_STRING, IDM_COLOR, "Custom color...");
         AppendMenu(menu, MF_SEPARATOR, 0, nullptr);
         AppendMenu(menu, MF_STRING | (m_config.launchOnStartup ? MF_CHECKED : MF_UNCHECKED), IDM_STARTUP, "Launch on Startup");
         AppendMenu(menu, MF_SEPARATOR, 0, nullptr);
@@ -217,6 +249,13 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                         PostQuitMessage(0);
                         return 0;
 
+                case WM_GETMINMAXINFO: {
+                        MINMAXINFO* mmi = reinterpret_cast<MINMAXINFO*>(lParam);
+                        mmi->ptMinTrackSize.x = 100;
+                        mmi->ptMinTrackSize.y = 100;
+                        return 0;
+                }
+
                 case WM_HOTKEY: {
                         if(wParam == 1 && app)
                                 app->toggleVisibility();
@@ -226,6 +265,11 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                 case WM_KEYDOWN:
                         if(wParam == VK_ESCAPE)
                                 PostQuitMessage(0);
+                        return 0;
+
+                case WM_LBUTTONDOWN:
+                        ReleaseCapture();
+                        SendMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, lParam);
                         return 0;
 
                 case WM_MOUSEWHEEL: {
@@ -261,7 +305,7 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                         if(onTop)               return HTTOP;
                         if(onBottom)            return HTBOTTOM;
 
-                        return HTCAPTION;
+                        return HTCLIENT;
                 }
 
                 case WM_PAINT: {
@@ -271,6 +315,10 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                         EndPaint(hwnd, &ps);
                         return 0;
                 }
+
+                case WM_RBUTTONUP:
+                        if(app) app->showColorPicker();
+                        return 0;
 
                 case WM_SIZE:
                         if(app) app->onResize();

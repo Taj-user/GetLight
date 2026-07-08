@@ -6,6 +6,7 @@
 #define IDM_PRESET_SOFT         103
 #define IDM_STARTUP             104
 #define IDM_QUIT                105
+#define IDM_COLOR               106
 
 #include <windows.h>
 #include "Config.hpp"
@@ -19,6 +20,7 @@ class App {
                 int             run();
 
         private:
+                COLORREF        m_customColors[16];
                 Config          m_config;
                 HINSTANCE       m_hInstance;
                 HWND            m_hwnd;
@@ -34,6 +36,7 @@ class App {
                 void            onResize();
                 void            paintWindow(HDC hdc);
                 void            removeTrayIcon();
+                void            showColorPicker();
                 void            showContextMenu();
                 void            toggleVisibility();
 
