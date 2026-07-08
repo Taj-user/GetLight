@@ -1,3 +1,4 @@
+#include <windowsx.h>
 #include "App.hpp"
 
 App::App(HINSTANCE hInstance) 
@@ -124,6 +125,17 @@ bool App::init() {
         return true;
 }
 
+void App::onMove(int x, int y) {
+        m_config.x = x;
+        m_config.y = y;
+}
+
+void App::onResize() {
+        RECT rc;
+        GetClientRect(m_hwnd, &rc);
+        m_config.width = rc.right;
+        m_config.height = rc.bottom;
+}
 
 void App::paintWindow(HDC hdc) {
         RECT rc;
@@ -222,8 +234,35 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                         return 0;
                 }
 
-                case WM_NCHITTEST:
+                case WM_MOVE:
+                        if(app) app->onMove(LOWORD(lParam), HIWORD(lParam));
+                        return 0;
+
+                case WM_NCHITTEST: {
+                        int x = GET_X_LPARAM(lParam);
+                        int y = GET_Y_LPARAM(lParam);
+
+                        RECT rc;
+                        GetWindowRect(hwnd, &rc);
+
+                        const int border = 8;
+
+                        bool onLeft             = x < rc.left + border;
+                        bool onRight            = x >= rc.right - border;
+                        bool onTop              = y < rc.top + border;
+                        bool onBottom           = y >= rc.bottom - border;
+
+                        if(onLeft && onTop)     return HTTOPLEFT;
+                        if(onRight && onTop)    return HTTOPRIGHT;
+                        if(onLeft && onBottom)  return HTBOTTOMLEFT;
+                        if(onRight && onBottom) return HTBOTTOMRIGHT;
+                        if(onLeft)              return HTLEFT;
+                        if(onRight)             return HTRIGHT;
+                        if(onTop)               return HTTOP;
+                        if(onBottom)            return HTBOTTOM;
+
                         return HTCAPTION;
+                }
 
                 case WM_PAINT: {
                         PAINTSTRUCT ps;
@@ -232,6 +271,10 @@ LRESULT CALLBACK App::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam
                         EndPaint(hwnd, &ps);
                         return 0;
                 }
+
+                case WM_SIZE:
+                        if(app) app->onResize();
+                        return 0;
 
                 case WM_TRAYICON:
                         if(lParam == WM_RBUTTONUP && app)

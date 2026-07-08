@@ -30,6 +30,8 @@ class App {
                 void            disableStartup();
                 void            enableStartup();
                 void            handleMenuCommand(WORD id);
+                void            onMove(int x, int y);
+                void            onResize();
                 void            paintWindow(HDC hdc);
                 void            removeTrayIcon();
                 void            showContextMenu();
